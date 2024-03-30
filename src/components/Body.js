@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import Card from './Card';
-import { restaurantList } from '../config';
-
-function filterData(searchText, restaurants){
-  const filterData = restaurants.filter((restaurant)=>
-   restaurant.info.name.includes(searchText)
-  );
-  console.log(filterData);
-  return filterData;
-}
+import RestaurantCard from './RestaurantCard';
+import Shimmer from './Shimmer';
+import { filterData } from '../utils/helper';
+import useOnline from '../utils/useOnline';
+import { Link } from 'react-router-dom';
 
 const Body = () => {
-  const [restaurants, setRestaurants] = useState([]);
+  const [allRestaurants, setAllRestaurants] = useState([]);
+  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
   const [searchText, setSearchText] = useState(" ");
 
   useEffect(()=>{
@@ -20,14 +16,24 @@ const Body = () => {
 
   async function getRestaurants(){
     const data = await fetch("https://www.swiggy.com/dapi/restaurants/list/v5?lat=27.49870&lng=77.66690&is-seo-homepage-enabled=true&page_type=DESKTOP_WEB_LISTING")
-
     const json = await data.json();
     console.log(json);
-    setRestaurants(json?.data?.cards[4]?.card?.card?.gridElements?.infoWithStyle?.restaurants);
-    console.log(restaurants);
+    setAllRestaurants(json?.data?.cards[4]?.card?.card?.gridElements?.infoWithStyle?.restaurants);
+    setFilteredRestaurants(json?.data?.cards[4]?.card?.card?.gridElements?.infoWithStyle?.restaurants);
+    console.log(allRestaurants);
   }
   
-  return (
+// check if the user is offline
+  // const isOffline = useOnline();
+  // if(isOffline){
+  //   return <h2>You are offline , please check your connection </h2>
+  // }
+
+  //not render any component (early return)
+  if(!allRestaurants) return null;
+
+  return (allRestaurants.length==0)? <Shimmer/>
+  : (
     <>
     <div className="search-box">
       <input
@@ -43,18 +49,27 @@ const Body = () => {
       className='search-btn'
       onClick={()=>{
         //need to filter data
-        const data = filterData(searchText, restaurants);
+        const data = filterData(searchText, allRestaurants);
         //update the state - restaurants
-        setRestaurants(data);
+        setFilteredRestaurants(data);
       }}
       >
         search
       </button>
     </div>
     <div className='restuarant-list'>
-      {restaurants.map((restaurant)=>{
+      {filteredRestaurants.map((restaurant)=>{
+        let res = restaurant.info
         return (
-          <Card data = {restaurant} key={restaurant.info.id} />
+          <Link 
+          key={res.id}
+          to={"restaurant/" + res.id}>
+          <RestaurantCard 
+          data = {res} key={res.id} 
+          cloudinaryImageId={res.cloudinaryImageId} 
+          name={res.name}
+          area={res.locality} costForTwoString={res.costForTwo} />
+          </Link>
         );
       })
       }
